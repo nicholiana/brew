@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Brew Heaven Café - Mobile POS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ---------- BASE ---------- */
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #1e1b18;
+    color: #fff;
+}
+
+/* ---------- TITLE ---------- */
+h1 { 
+    text-align: center; 
+    font-size: 28px; 
+    padding: 15px 0; 
+    color: #f5deb3; 
+    background: #2c261f;
+    margin: 0;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+}
+
+/* ---------- NAVIGATION ---------- */
+nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: #3a3126;
+    padding: 10px 0;
+    position: sticky;
+    top: 56px;
+    z-index: 150;
+}
+nav button {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+nav button.active, nav button:hover {
+    background: #f5deb3;
+    color: #1e1b18;
+    font-weight: bold;
+}
+
+/* ---------- CATEGORY FILTER BUTTONS ---------- */
+.category-buttons {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: #2c261f;
+    padding: 10px 5px;
+    position: sticky;
+    top: 106px;
+    z-index: 100;
+}
+.category-buttons button {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #3a3126;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: 0.2s;
+    font-size: 12px;
+}
+.category-buttons button.active {
+    background: #f5deb3;
+    color: #1e1b18;
+    font-weight: bold;
+}
+.category-buttons img {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+}
+
+/* ---------- TABS ---------- */
+.tab { display: none; padding: 15px; }
+.tab.active { display: block; }
+
+/* ---------- PRODUCT GRID ---------- */
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    padding: 10px;
+}
+.card {
+    background: #2c261f;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+    transition: 0.25s;
+}
+.card:hover { transform: translateY(-4px); }
+.card img { width: 100%; height: 120px; object-fit: cover; }
+.card-content { padding: 10px; text-align: center; }
+.card h3 { font-size: 16px; color: #f5deb3; margin-bottom: 6px; }
+.price { color: #d9a066; font-weight: bold; margin-bottom: 4px; }
+.inventory { font-size: 12px; color: #bbb; margin-bottom: 6px; }
+.card button { width: 100%; padding: 8px; background: #d9a066; color: #1e1b18; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+.card button:hover { background: #f5deb3; }
+
+/* ---------- CART ---------- */
+#cartBox { background: #2c261f; border-radius: 12px; padding: 15px; margin: 10px 5px; }
+#cartBox button { width: 100%; padding: 12px; margin-top: 10px; background: #d9a066; color: #1e1b18; border-radius: 8px; cursor: pointer; font-weight: bold; }
+#cartItems div { padding: 8px 0; border-bottom: 1px solid #444; font-size: 14px; }
+
+/* ---------- ADMIN ---------- */
+#adminBox input, #adminBox select { width: 100%; margin-bottom: 8px; padding: 8px; border-radius: 6px; border: none; font-size: 14px; }
+
+/* ---------- REPORT ---------- */
+#reportBox { padding: 10px; background: #2c261f; border-radius: 10px; }
+
+/* ---------- RECEIPT ---------- */
+#receipt { display:none; font-family: monospace; color: #000; background:#fff; padding:10px; }
+@media print {
+    body * { visibility:hidden; }
+    #receipt, #receipt * { visibility: visible; }
+    #receipt { position:absolute; top:0; left:0; width:100%; }
+}
+
+/* ---------- MOBILE RESPONSIVE ---------- */
+@media(max-width:480px){
+    h1 { font-size: 24px; padding: 12px 0; }
+    nav button { font-size: 12px; padding: 6px 8px; }
+    .card h3 { font-size: 14px; }
+    .card button { font-size: 13px; padding: 6px; }
+}
+</style>
+</head>
+<body>
+
+<h1>☕ Brew Heaven Café</h1>
+
+<!-- NAV -->
+<nav>
+    <button class="active" onclick="showTab('menuTab')">Menu</button>
+    <button onclick="showTab('cartTab')">Cart</button>
+    <button onclick="showTab('reportTab')">Report</button>
+    <button onclick="showTab('paymentTab')">Payment</button>
+</nav>
+
+<!-- CATEGORY FILTER -->
+<div class="category-buttons" id="categoryButtons"></div>
+
+<!-- TABS -->
+<div id="menuTab" class="tab active">
+    <input type="text" id="searchBar" placeholder="Search products..." oninput="filterProducts()" style="width:95%;padding:10px;margin:10px auto;display:block;border-radius:8px;border:none;">
+    <div class="container" id="productContainer"></div>
+</div>
+
+<div id="cartTab" class="tab">
+    <div id="cartBox">
+        <h2>🛒 Your Cart</h2>
+        <div id="cartItems">Cart is empty.</div>
+        <h3>Total: ₱<span id="totalPrice">0</span></h3>
+        <button onclick="checkout()">Checkout & Print Receipt</button>
+    </div>
+</div>
+
+<div id="adminTab" class="tab">
+    <div id="adminBox">
+        <h2>Admin Panel</h2>
+        <label>Select Item to Edit:</label>
+        <select id="adminSelect" onchange="populateAdmin()"></select>
+        <input type="text" id="adminName" placeholder="Name">
+        <input type="number" id="adminPrice" placeholder="Price">
+        <input type="number" id="adminStock" placeholder="Stock">
+        <input type="text" id="adminImg" placeholder="Image file name">
+        <button onclick="saveAdmin()">Save Changes</button>
+    </div>
+</div>
+
+<div id="reportTab" class="tab">
+    <h2>Sales Report</h2>
+    <div id="reportBox">
+        <div>Total Orders: <span id="reportOrders">0</span></div>
+        <div>Total Sales: ₱<span id="reportSales">0</span></div>
+        <div>Items Sold:</div>
+        <ul id="reportItems"></ul>
+    </div>
+</div>
+
+<div id="paymentTab" class="tab">
+    <h2>Payment</h2>
+    <p>Choose Payment Method:</p>
+    <button onclick="simulatePayment('GCash')">Pay via GCash</button>
+    <button onclick="simulatePayment('PayMaya')">Pay via PayMaya</button>
+</div>
+
+<div id="receipt"></div>
+
+<script>
+// ---------- DATA ----------
+let cart = [], total = 0, orderCount = 0, salesReport = {};
+let products = [
+    // Coffee
+    {id:1, category:'Coffee', name:'Caramel Latte', price:149, stock:10, img:'Caramel.jpg'},
+    {id:2, category:'Coffee', name:'Iced Mocha', price:129, stock:12, img:'IceMocha.jpg'},
+    {id:3, category:'Coffee', name:'Classic Brew', price:99, stock:15, img:'ClassicBrew.jpg'},
+    {id:10, category:'Coffee', name:'Americano', price:89, stock:20, img:'Americano.jpg'},
+    {id:11, category:'Coffee', name:'Espresso', price:109, stock:18, img:'Espresso.jpg'},
+    {id:12, category:'Coffee', name:'Matcha Latte', price:139, stock:14, img:'MatchaLatte.jpg'},
+    // Pastry
+    {id:4, category:'Pastry', name:'Chocolate Cake', price:199, stock:8, img:'ChocolateCake.jpg'},
+    {id:5, category:'Pastry', name:'Strawberry Cheesecake', price:229, stock:7, img:'StrawberryCheesecake.jpg'},
+    {id:6, category:'Pastry', name:'Croissant', price:75, stock:14, img:'Croissant.jpg'},
+    {id:13, category:'Pastry', name:'Blueberry Muffin', price:85, stock:12, img:'Muffin.jpg'},
+    {id:14, category:'Pastry', name:'Cinnamon Roll', price:89, stock:10, img:'CinnamonRoll.jpg'},
+    // Bread
+    {id:7, category:'Bread', name:'Garlic Bread', price:79, stock:10, img:'GarlicBread.jpg'},
+    {id:8, category:'Bread', name:'French Baguette', price:59, stock:9, img:'FrenchBaguette.jpg'},
+    {id:9, category:'Bread', name:'Bagel', price:69, stock:15, img:'Bagel.jpg'}
+];
+
+// ---------- TABS ----------
+function showTab(tabId){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
+
+// ---------- RENDER PRODUCTS ----------
+function renderProducts(filterCategory='', search=''){
+    let container = document.getElementById('productContainer');
+    container.innerHTML='';
+    products
+      .filter(p => (!filterCategory || p.category === filterCategory) && p.name.toLowerCase().includes(search.toLowerCase()))
+      .forEach(p=>{
+        let card=document.createElement('div'); 
+        card.className='card';
+        card.innerHTML=`<img src="${p.img}">
+            <div class="card-content">
+                <h3>${p.name}</h3>
+                <div class="price">₱${p.price}</div>
+                <div class="inventory">Stock: <span id="stock-${p.id}">${p.stock}</span></div>
+                <button onclick="addToCart(${p.id})">Add</button>
+            </div>`;
+        container.appendChild(card);
+      });
+
+    // ---------- CATEGORY BUTTONS ----------
+    let catDiv = document.getElementById('categoryButtons');
+    catDiv.innerHTML='';
+    const categories = ['Coffee','Pastry','Bread'];
+    const icons = {Coffee:'coffe.jpg',Pastry:'cake.png',Bread:'bread.png'};
+
+    categories.forEach(cat=>{
+        let b = document.createElement('button');
+        b.innerHTML=`<img src="${icons[cat]||''}" alt="${cat}"><span>${cat}</span>`;
+        b.classList.add(filterCategory===cat ? 'active':'');
+        b.onclick=()=>{
+            document.querySelectorAll('.category-buttons button').forEach(btn=>btn.classList.remove('active'));
+            b.classList.add('active');
+            renderProducts(cat, document.getElementById('searchBar').value);
+        };
+        catDiv.appendChild(b);
+    });
+
+    let allBtn = document.createElement('button');
+    allBtn.innerText='All';
+    allBtn.classList.add(!filterCategory ? 'active':'');
+    allBtn.onclick = () => {
+        document.querySelectorAll('.category-buttons button').forEach(btn=>btn.classList.remove('active'));
+        allBtn.classList.add('active');
+        renderProducts('', document.getElementById('searchBar').value);
+    };
+    catDiv.appendChild(allBtn);
+}
+
+renderProducts();
+
+function filterProducts(){
+    const activeBtn = document.querySelector('.category-buttons button.active');
+    let category = activeBtn ? activeBtn.innerText : '';
+    if(category === 'All') category = '';
+    renderProducts(category, document.getElementById('searchBar').value);
+}
+
+// ---------- CART ----------
+function addToCart(id){
+    let item=products.find(p=>p.id===id);
+    if(item.stock<=0){alert('Out of stock'); return;}
+    item.stock--;
+    document.getElementById(`stock-${id}`).innerText=item.stock;
+    cart.push({name:item.name,price:item.price});
+    total+=item.price;
+    updateCart();
+}
+function updateCart(){
+    let cartDiv=document.getElementById('cartItems');
+    cartDiv.innerHTML='';
+    if(cart.length===0){cartDiv.innerHTML='Cart is empty.';} else{
+        cart.forEach(i=>{let row=document.createElement('div'); row.innerText=`${i.name} — ₱${i.price}`; cartDiv.appendChild(row);});
+    }
+    document.getElementById('totalPrice').innerText=total;
+}
+function checkout(){
+    if(cart.length===0){alert('Cart is empty'); return;}
+    orderCount++;
+    let receiptText=`<h2>Brew Heaven Café Receipt</h2><pre>Order #: ${orderCount}\nDate: ${new Date().toLocaleString()}\n----------------------------------------\nItem                 Price\n----------------------------------------\n`;
+    cart.forEach(i=>{receiptText+=`${i.name.padEnd(20)} ₱${i.price}\n`; if(!salesReport[i.name]) salesReport[i.name]=0; salesReport[i.name]++;});
+    receiptText+=`----------------------------------------\nTOTAL: ₱${total}\n----------------------------------------\nThank you!\n</pre>`;
+    let receiptDiv=document.getElementById('receipt');
+    receiptDiv.innerHTML=receiptText;
+    receiptDiv.style.display='block';
+    window.print();
+    cart=[]; total=0; updateCart(); updateReport();
+}
+
+// ---------- ADMIN ----------
+let adminSelect=document.getElementById('adminSelect');
+function populateAdmin(){
+    let sel=products.find(p=>p.id==adminSelect.value);
+    if(!sel) return;
+    document.getElementById('adminName').value=sel.name;
+    document.getElementById('adminPrice').value=sel.price;
+    document.getElementById('adminStock').value=sel.stock;
+    document.getElementById('adminImg').value=sel.img;
+}
+function saveAdmin(){
+    let sel=products.find(p=>p.id==adminSelect.value);
+    if(!sel) return;
+    sel.name=document.getElementById('adminName').value;
+    sel.price=parseFloat(document.getElementById('adminPrice').value);
+    sel.stock=parseInt(document.getElementById('adminStock').value);
+    sel.img=document.getElementById('adminImg').value;
+    renderProducts();
+    populateAdmin();
+}
+products.forEach(p=>{let opt=document.createElement('option'); opt.value=p.id; opt.innerText=p.name; adminSelect.appendChild(opt);});
+
+// ---------- REPORT ----------
+function updateReport(){
+    document.getElementById('reportOrders').innerText=orderCount;
+    let totalSales=0;
+    for(let k in salesReport){ let prod=products.find(p=>p.name===k); totalSales+=prod.price*salesReport[k];}
+    document.getElementById('reportSales').innerText=totalSales;
+    let itemsUl=document.getElementById('reportItems');
+    itemsUl.innerHTML='';
+    for(let k in salesReport){ let li=document.createElement('li'); li.innerText=`${k} — Sold: ${salesReport[k]}`; itemsUl.appendChild(li);}
+}
+
+// ---------- PAYMENT ----------
+function simulatePayment(method){ alert(`Payment via ${method} successful!`); }
+</script>
+</body>
+</html>
